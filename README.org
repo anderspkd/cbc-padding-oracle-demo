@@ -25,11 +25,11 @@ way.)
 
    The server exposes 3 relevant routes that can be used to play the
    "decryption" game:
-   | route name     | description                                                          |
-   |----------------+----------------------------------------------------------------------|
-   | encrypted_flag | Returns F                                                            |
-   | decrypt?hex(C) | Returns "OK" if D(k,C) has valid padding and "Bad padding" otherwise |
-   | test_flag?F'   | Returns "Yay" if D(k,F) = F' and "Boo" otherwise                     |
+   | route name     | description                                                            |
+   |----------------+------------------------------------------------------------------------|
+   | encrypted_flag | Returns F                                                              |
+   | decrypt?hex(C) | Returns /OK/ if ~D(k,C)~ has valid padding and /Bad padding/ otherwise |
+   | test_flag?G    | Returns /Yay/ if ~D(k,F) = G~ and /Boo/ otherwise                      |
 
    The goal is then to use the ~decrypt_flag~ route (since this is
    where the padding oracle is exposed) in order to decrypt the F
@@ -47,7 +47,7 @@ way.)
    | route name                   | description                           |
    |------------------------------+---------------------------------------|
    | decrypt?hex(C)               | Padding oracle (see previous section) |
-   | test_encryption?e=hex(C)&d=t | "Yay" if D(k,C) = t, "Boo" otherwise  |
+   | test_encryption?e=hex(C)&d=t | /Yay/ if ~D(k,C) = t~, /Boo/ otherwise |
 
    See ~client_enc.py~.
 

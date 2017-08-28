@@ -62,8 +62,6 @@ def decrypt_block(y, block_num):
         if found:
             i -= 1
         else:
-            # For some reason, we won't always find a valid
-            # byte. Dunno why.
             print('[!] nothing found for pb={}, rs[{}]={}'.format(pb, i, rs[i]))
             i -= 1
 
