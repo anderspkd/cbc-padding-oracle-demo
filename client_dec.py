@@ -72,7 +72,7 @@ def decrypt_block(y, block_num):
 
 
 if __name__ == '__main__':
-    # enc_flag = IV || : || C
+    # enc_flag = IV || C
     enc_flag = unhexlify(get_encrypted_flag())
 
     # Not /really/ necessary
