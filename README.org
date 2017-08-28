@@ -1,0 +1,61 @@
+#+TITLE: Simple CBC-padding oracle demonstration
+
+CBC padding oracle demonstration, demonstrating both decryption (see
+~client_dec.py~) and encryption (see ~client_enc.py~).
+
+A ciphertext C of n blocks has the following form
+: C = C_0 || C_1 || ... || C_n
+where C_0 = IV. (Doing it this way allows us to get a complete
+encryption, instead of a garbled first block---it's more fun this
+way.)
+
+* Server
+
+  The server (~server.py~) is written in Python 2 and uses Flask.
+
+  To run the server
+  : $ python server.py
+
+
+** Decryption game
+
+   When the server starts it samples a random key K and constructs a
+   flag F of the form
+   : F = flag{hex(32 random bytes)}
+
+   The server exposes 3 relevant routes that can be used to play the
+   "decryption" game:
+   | route name     | description                                                          |
+   |----------------+----------------------------------------------------------------------|
+   | encrypted_flag | Returns F                                                            |
+   | decrypt?hex(C) | Returns "OK" if D(k,C) has valid padding and "Bad padding" otherwise |
+   | test_flag?F'   | Returns "Yay" if D(k,F) = F' and "Boo" otherwise                     |
+
+   The goal is then to use the ~decrypt_flag~ route (since this is
+   where the padding oracle is exposed) in order to decrypt the F
+   recieved from ~encrypted_flag~.
+
+   See ~client_dec.py~ for an implementation of a client who beats
+   this game.
+
+** Encryption game
+
+   Given a P, the goal is to construct a valid ciphertext C such that
+   D(k,C) = P.
+
+   Relevant routes are
+   | route name                   | description                           |
+   |------------------------------+---------------------------------------|
+   | decrypt?hex(C)               | Padding oracle (see previous section) |
+   | test_encryption?e=hex(C)&d=t | "Yay" if D(k,C) = t, "Boo" otherwise  |
+
+   See ~client_enc.py~.
+
+* References
+
+  - Vaudenay, Serge. "Security flaws induced by CBC
+    padding-applications to SSL, IPSEC, WTLS."
+    EUROCRYPT. Vol. 2332. 2002.
+
+  - Rizzo, Juliano, and Thai Duong. "Practical Padding Oracle
+    Attacks." WOOT. 2010.
