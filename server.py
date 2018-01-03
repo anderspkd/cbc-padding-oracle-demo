@@ -1,96 +1,66 @@
-from flask import Flask, request, redirect, Response
+from flask import Flask
 from Crypto.Cipher import AES
 from os import urandom as rand
-import logging
-log = logging.getLogger('werkzueg')
-log.setLevel(logging.ERROR)
+from binascii import unhexlify
 
 app = Flask(__name__)
-
-# Typical CTF style flag
-flag = 'flag{%s}' % rand(32).encode('hex')
-key = rand(32)
+flag = 'flag{' + rand(32).hex() + '}'
+key = rand(32)  # AES key
 
 
-# adds PKCS#7 padding
+# Creates an AES cipher object
+def aes(iv):
+    return AES.new(key, AES.MODE_CBC, iv)
+
+
+# apply PKCS#7 padding to m
 def pad(m):
-    l = 16 - len(m) % 16
-    return m + (chr(l) * l)
+    ln = 16 - len(m) % 16
+    return m + (chr(ln) * ln)
 
 
-# removes PKCS#7 padding. Returns `None' if padding is wrong.
+# remove PKCS#7 padding. Exposes a padding oracle
 def unpad(m):
-    l = ord(m[-1])
-    for c in m[-l:]:
-        if ord(c) != l:
+    ln = m[-1]
+    for c in m[-ln:]:
+        if c != ln:
             return
-    if 0 < l <= 16:
-        return m[:-l]
+    if 0 < ln <= 16:
+        return m[:-ln]
 
 
-@app.route('/encrypted_flag')
-def get_encrypted_flag():
-    iv = rand(16)  # random IV
-    cipher = AES.new(key, AES.MODE_CBC, iv)
+# returns the flag, encrypted under the key and a random IV
+@app.route('/flag')
+def get_flag():
+    iv = rand(16)
+    c = aes(iv).encrypt(pad(flag))
 
-    padded_flag = pad(flag)
-    c = cipher.encrypt(padded_flag)
-
-    print 'Flag: %r' % padded_flag
-
-    pl = '%s%s' % (iv, c)
-
-    return pl.encode('hex') + '\n'
+    return f'{iv.hex()}{c.hex()}'
 
 
-@app.route('/decrypt')
-def decrypt_flag():
-    try:
-        _c = request.args.keys()[0].decode('hex')
-        iv = _c[:16]
-        c = _c[16:]
-        assert len(iv) == 16, 'len(iv)=%s, hex(iv)=%s' % (len(iv), iv.encode('hex'))
-    except:
-        return 'Nothing to decrypt\n'
+def decrypt(c):
+    c = unhexlify(c)
 
-    if len(c) % 16 != 0:
-        return 'Ciphertext not a multiple of block length\n'
+    iv = c[:16]
+    c = c[16:]
 
-    cipher = AES.new(key, AES.MODE_CBC, iv)
+    if len(c) % 16:
+        return
 
-    p = unpad(cipher.decrypt(c))
-
-    if p is not None:
-        return 'OK\n'
-    else:
-        return 'Bad padding\n'
+    return unpad(aes(iv).decrypt(c))
 
 
-@app.route('/test_encryption')
-def test_encryption():
-    encrypted = request.args['e'].decode('hex')
-    decrypted = request.args['d']
+# attempts to decrypt
+@app.route('/decrypt/<c>')
+def decrypt_silent(c):
+    p = decrypt(c)
 
-    iv = encrypted[:16]
-    c = encrypted[16:]
+    if p is None:
+        return 'bad padding'
 
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    p = unpad(cipher.decrypt(c))
-
-    if p == decrypted:
-        return 'Yay\n'
-    else:
-        return 'Boo\n'
+    return 'ok'
 
 
-@app.route('/test_flag')
-def test_flag():
-    flag_cand = request.args.keys()[0]
-
-    if flag == flag_cand:
-        return 'Yay\n'
-    else:
-        return 'Boo\n'
-
-if __name__ == '__main__':
-    app.run()
+@app.route('/decrypt_reveal/<c>')
+def decrypt_loud(c):
+    return decrypt(c)
