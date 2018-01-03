@@ -1,13 +1,36 @@
-#+TITLE: Simple CBC-padding oracle demonstration
+#+TITLE: CBC-padding Oracle Demonstration
 
-CBC padding oracle demonstration, demonstrating both decryption (see
-~client_dec.py~) and encryption (see ~client_enc.py~).
+The following simple client-server program illustrates the dangers of revealing padding errors, when using AES in CBC mode.
 
-A ciphertext C of n blocks has the following form
-: C = C_0 || C_1 || ... || C_n
-where C_0 = IV. (Doing it this way allows us to get a complete
-encryption, instead of a garbled first block---it's more fun this
-way.)
+The TL;DR: Recall that a CBC ciphertext is
+
+: C[0] || C[1] || ... || C[n]
+
+where ~C[0]~ is the IV and
+
+: C[i] = E(P[i] xor C[i-1])
+
+Suppose the padding scheme used is PKCS#7. We can then decrypt block ~i~ in the following way:
+
+Let ~c~ be a byte that we pick, define
+: IV := C[i-1] xor c xor 0x01
+: C  := C[i]
+and send ~C=AB~ as the ciphertext to the oracle. When the oracle decrypts, it recovers
+: F = D(C) xor IV
+:   = I[i] xor C[i-1] xor c xor 0x01
+:   = P[i] xor c xor 0x01
+
+(Note the ~A~ acts as the IV. ~I[i]~ denotes the intermidiate value that the block cipher decryption algorithm ~D~ outputs.)
+Suppose ~c~ was picked such that it matches the last byte of ~P[i]~.
+Then in this case, ~P[i] xor c xor 0x01~ will be ~P[i]~ except with ~0x01~ at the end.
+In particular, ~F~ has valid padding.
+On the other hand, if ~c~ was incorrect, then with good probability, the padding of ~F~ will be incorrect as well.
+Thus, if the oracle tells us whether or not the padding of ~F~ is correct, we can use it to guess the last byte of the plaintext.
+
+It is straight forward to turn this into a procedure that decrypts the entire block:
+when we've recovered ~c_n~ (the last byte), let our next choice be ~c_(n-1)||(c_n xor 0x02)~ and use ~0x02~ as the padding instead.
+We know ~c_n~ matches, so when we get the "valid padding" response from the oracle, we learn
+that the last two bytes of ~F~ is ~0x02 0x02~ and thus that our guess at ~c_(n-1)~ was correct.
 
 * Server
 
