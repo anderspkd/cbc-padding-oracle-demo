@@ -1,8 +1,10 @@
 #+TITLE: CBC-padding Oracle Demonstration
 
-The following simple client-server program illustrates the dangers of revealing padding errors, when using AES in CBC mode.
+The following simple client-server program illustrates the dangers of revealing padding errors, when CBC mode.
 
-The TL;DR: Recall that a CBC ciphertext is
+* The TL;DR
+
+Recall that a CBC ciphertext is
 
 : C[0] || C[1] || ... || C[n]
 
@@ -21,6 +23,7 @@ and send ~C=AB~ as the ciphertext to the oracle. When the oracle decrypts, it re
 :   = P[i] xor c xor 0x01
 
 (Note the ~A~ acts as the IV. ~I[i]~ denotes the intermidiate value that the block cipher decryption algorithm ~D~ outputs.)
+
 Suppose ~c~ was picked such that it matches the last byte of ~P[i]~.
 Then in this case, ~P[i] xor c xor 0x01~ will be ~P[i]~ except with ~0x01~ at the end.
 In particular, ~F~ has valid padding.
@@ -32,52 +35,21 @@ when we've recovered ~c_n~ (the last byte), let our next choice be ~c_(n-1)||(c_
 We know ~c_n~ matches, so when we get the "valid padding" response from the oracle, we learn
 that the last two bytes of ~F~ is ~0x02 0x02~ and thus that our guess at ~c_(n-1)~ was correct.
 
-* Server
+* Client Server program
 
-  The server (~server.py~) is written in Python 2 and uses Flask.
+  The demonstration application consists of a server and a client, the server acting as the oracle.
 
-  To run the server
-  : $ python server.py
+  When started, the server creates a CTF-style plaintext that we want to retrieve.
+  We do this by requesting ~/flag~.
 
-** Decryption game
+  Now, the client will keep requesting ~/decrypt/c~ in the manner described above, with ~c~ as a (hex encoded)
+  ciphertext. The server will reply with ~ok~ or ~bad padding~ depending on whether or not the padding of ~c~ was valid.
 
-   When the server starts it samples a random key K and constructs a
-   flag F of the form
-   : F = flag{hex(32 random bytes)}
+  Note that the client is also able to encrypt arbitrary texts.
+  I.e., the decryption padding oracle can in fact also be used to create arbitrary ciphertexts for plaintexts we choose.
 
-   The server exposes 3 relevant routes that can be used to play the
-   "decryption" game:
-   | route name     | description                                                            |
-   |----------------+------------------------------------------------------------------------|
-   | encrypted_flag | Returns F                                                              |
-   | decrypt?hex(C) | Returns /OK/ if ~D(k,C)~ has valid padding and /Bad padding/ otherwise |
-   | test_flag?G    | Returns /Yay/ if ~F = G~ and /Boo/ otherwise                           |
+* References / further reading
 
-   The goal is then to use the ~decrypt_flag~ route (since this is
-   where the padding oracle is exposed) in order to decrypt the F
-   recieved from ~encrypted_flag~.
+  - Vaudenay, Serge. "Security flaws induced by CBC padding-applications to SSL, IPSEC, WTLS." EUROCRYPT. Vol. 2332. 2002.
 
-   See ~client_dec.py~ for an implementation of a client who beats
-   this game.
-
-** Encryption game
-
-   Given a P, the goal is to construct a valid ciphertext C such that
-   D(k,C) = P.
-
-   Relevant routes are
-   | route name                   | description                           |
-   |------------------------------+---------------------------------------|
-   | decrypt?hex(C)               | Padding oracle (see previous section) |
-   | test_encryption?e=hex(C)&d=t     | /Yay/ if ~D(k,C) = t~, /Boo/ otherwise |
-
-   See ~client_enc.py~.
-
-* References
-
-  - Vaudenay, Serge. "Security flaws induced by CBC
-    padding-applications to SSL, IPSEC, WTLS."
-    EUROCRYPT. Vol. 2332. 2002.
-
-  - Rizzo, Juliano, and Thai Duong. "Practical Padding Oracle
-    Attacks." WOOT. 2010.
+  - Rizzo, Juliano, and Thai Duong. "Practical Padding Oracle Attacks." WOOT. 2010.
