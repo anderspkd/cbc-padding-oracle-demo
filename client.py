@@ -7,6 +7,7 @@ import argparse
 p = argparse.ArgumentParser()
 p.add_argument('url', help='server url')
 p.add_argument('-e', metavar='plaintext', dest='ptxt', help='encrypt')
+p.add_argument('-b', metavar='lastblock', dest='last_block')
 args = p.parse_args()
 
 block_size = 16
@@ -108,7 +109,11 @@ def encrypt():
     for i in range(0, len(ptxt), block_size):
         blocks = [(j, ptxt[i:i + block_size])] + blocks
         j += 1
-    c = bytes(block_size)  # all 0 block. Can be anything
+
+    # default to all 0 block
+    c = bytes(args.last_block, 'ascii') or bytes(block_size)
+    assert len(c) == block_size, 'last block must have length 16'
+
     ctxt = [c]
     for i, b in blocks:
         c = encrypt_block(b, c, i)
