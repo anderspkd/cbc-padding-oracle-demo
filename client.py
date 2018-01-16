@@ -6,8 +6,10 @@ import argparse
 
 p = argparse.ArgumentParser()
 p.add_argument('url', help='server url')
-p.add_argument('-e', metavar='plaintext', dest='ptxt', help='encrypt')
-p.add_argument('-b', metavar='lastblock', dest='last_block')
+p.add_argument('-e', metavar='plaintext', dest='ptxt',
+               help='text to encrypt')
+p.add_argument('-b', metavar='lastblock', dest='last_block',
+               help='last block of new encryption')
 args = p.parse_args()
 
 block_size = 16
