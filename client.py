@@ -55,7 +55,7 @@ def decrypt_block(y, block_num):
         i -= 1
 
         if not found:
-            print('[!] nothing found for pb={pb}, rs[{i}]={rs[i]}')
+            print(f'[!] nothing found for pb={pb}, rs[{i}]={rs[i]}')
 
         found = False
 

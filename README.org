@@ -47,6 +47,7 @@ that the last two bytes of ~F~ is ~0x02 0x02~ and thus that our guess at ~c_(n-1
 
   Note that the client is also able to encrypt arbitrary texts.
   I.e., the decryption padding oracle can in fact also be used to create arbitrary ciphertexts for plaintexts we choose.
+(How this is done is left as an exercise for the reader. Alternatively, you can just look at ~client.py~.)
 
 * References / further reading
 
