@@ -1,56 +1,39 @@
 #+TITLE: CBC-padding Oracle Demonstration
 
-The following simple client-server program illustrates the dangers of revealing padding errors, when CBC mode.
+CBC padding oracle demo application. Requires ~Python3~, ~requests~, ~pycrypto~
+and ~flask~.
 
-* The TL;DR
+** Running
+   
+   The easiest way to run this application, is to setup a virtual environment
+   and then install the required packages. I.e., something like
 
-Recall that a CBC ciphertext is
+   #+BEGIN_EXAMPLE
+   $ virtualenv -p python3 venv
+   $ source venv/bin/activate
+   $ pip install requests
+   $ pip install flask
+   $ pip install pycrypto
+   #+END_EXAMPLE
 
-: C[0] || C[1] || ... || C[n]
+   The server is then run as a standard flask application:
 
-where ~C[0]~ is the IV and
+   #+BEGIN_EXAMPLE
+   $ FLASK_APP=server.py flask run
+   #+END_EXAMPLE
+   
+   By default the server runs at ~127.0.0.1:5000~.
 
-: C[i] = E(P[i] xor C[i-1])
+** API
 
-Suppose the padding scheme used is PKCS#7. We can then decrypt block ~i~ in the following way:
+   On startup, the server picks a random key, and creates a random message of
+   the form:
 
-Let ~c~ be a byte that we pick, define
-: IV := C[i-1] xor c xor 0x01
-: C  := C[i]
-and send ~C=AB~ as the ciphertext to the oracle. When the oracle decrypts, it recovers
-: F = D(C) xor IV
-:   = I[i] xor C[i-1] xor c xor 0x01
-:   = P[i] xor c xor 0x01
+   : flag{<32 random hexencoded bytes}
 
-(Note the ~A~ acts as the IV. ~I[i]~ denotes the intermidiate value that the block cipher decryption algorithm ~D~ outputs.)
+   Whenever the server receives a request at
 
-Suppose ~c~ was picked such that it matches the last byte of ~P[i]~.
-Then in this case, ~P[i] xor c xor 0x01~ will be ~P[i]~ except with ~0x01~ at the end.
-In particular, ~F~ has valid padding.
-On the other hand, if ~c~ was incorrect, then with good probability, the padding of ~F~ will be incorrect as well.
-Thus, if the oracle tells us whether or not the padding of ~F~ is correct, we can use it to guess the last byte of the plaintext.
+   : 127.0.0.1:5000/decrypt/<c>
 
-It is straight forward to turn this into a procedure that decrypts the entire block:
-when we've recovered ~c_n~ (the last byte), let our next choice be ~c_(n-1)||(c_n xor 0x02)~ and use ~0x02~ as the padding instead.
-We know ~c_n~ matches, so when we get the "valid padding" response from the oracle, we learn
-that the last two bytes of ~F~ is ~0x02 0x02~ and thus that our guess at ~c_(n-1)~ was correct.
-
-* Client Server program
-
-  The demonstration application consists of a server and a client, the server acting as the oracle.
-
-  When started, the server creates a CTF-style plaintext that we want to retrieve.
-  We do this by requesting ~/flag~.
-
-  Now, the client will keep requesting ~/decrypt/c~ in the manner described above, with ~c~ as a (hex encoded)
-  ciphertext. The server will reply with ~ok~ or ~bad padding~ depending on whether or not the padding of ~c~ was valid.
-
-  Note that the client is also able to encrypt arbitrary texts.
-  I.e., the decryption padding oracle can in fact also be used to create arbitrary ciphertexts for plaintexts we choose.
-(How this is done is left as an exercise for the reader. Alternatively, you can just look at ~client.py~.)
-
-* References / further reading
-
-  - Vaudenay, Serge. "Security flaws induced by CBC padding-applications to SSL, IPSEC, WTLS." EUROCRYPT. Vol. 2332. 2002.
-
-  - Rizzo, Juliano, and Thai Duong. "Practical Padding Oracle Attacks." WOOT. 2010.
+   where ~<c>~ is a hex encoded ciphertext, it decrypts ~c~ and responds with
+   ~ok~ if the padding was correct and ~bad padding~ otherwise.
